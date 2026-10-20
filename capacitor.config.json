@@ -1,1 +1,10 @@
-{"appId":"com.atech.readingjournal","appName":"Reading Journal","webDir":"www"}
+{
+  "appId": "com.atech.readingjournal",
+  "appName": "Reading Journal",
+  "webDir": "www",
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}
