@@ -1,0 +1,40 @@
+name: Build APK
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack app.zip (the organised app files)
+        run: |
+          test -f app.zip || { echo "app.zip is missing from the repository main page"; exit 1; }
+          rm -rf www
+          unzip -o app.zip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm install
+      - run: cp node_modules/pdfjs-dist/build/pdf.min.js node_modules/pdfjs-dist/build/pdf.worker.min.js www/
+      - run: npx cap add android
+      - name: Add alarm permissions
+        run: |
+          sed -i 's#<application#<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/><uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/><uses-permission android:name="android.permission.VIBRATE"/><application android:requestLegacyExternalStorage="true"#' android/app/src/main/AndroidManifest.xml
+      - run: npx cap sync android
+      - name: Use the fixed signing key (keeps updates installable over the old app)
+        run: |
+          test -f debug.keystore || { echo "debug.keystore is missing from the repository main page"; exit 1; }
+          mkdir -p ~/.android
+          cp debug.keystore ~/.android/debug.keystore
+          keytool -list -keystore ~/.android/debug.keystore -storepass android | head -6
+      - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reading-journal-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
